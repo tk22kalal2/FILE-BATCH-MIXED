@@ -1,21 +1,20 @@
-#(©)Codexbotz
-import asyncio
+
+import re
 from pyrogram import Client, filters
 from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton
-from Adarsh.bot import StreamBot
-from config import ADMINS, CUSTOM_CAPTION, CHANNEL_ID
+from bot import Bot
+from config import ADMINS, CUSTOM_CAPTION, CD_CHANNEL, CHANNEL_ID
 from helper_func import encode, get_message_id
 from pyrogram.errors import FloodWait, UserIsBlocked, InputUserDeactivated
-import re
+import asyncio
 
-# Define a function to clean the caption
+# Helper function to clean the caption
 def clean_caption(caption):
-    # Remove words starting with # or @
+    # Remove words starting with # or @, and URLs
     caption = re.sub(r'\s?[@#]\S+', '', caption)
-    # Remove URLs
     caption = re.sub(r'http\S+', '', caption)
     return caption
-    
+
 @StreamBot.on_message(filters.private & filters.user(ADMINS) & filters.command('batch'))
 async def batch(client: Client, message: Message):
     while True:
@@ -62,7 +61,7 @@ async def batch(client: Client, message: Message):
             await second_message.reply("❌ Error\n\nthis Forwarded Post is not from my DB Channel or this Link is taken from DB Channel", quote=True)
             continue
 
-    xyz = "{\"X\"}"
+    xyz = "{{botUsername}}"
     message_links = []
     for msg_id in range(min(f_msg_id, s_msg_id), max(f_msg_id, s_msg_id) + 1):
         try:
@@ -73,13 +72,13 @@ async def batch(client: Client, message: Message):
             message_links.append((linka, msg_id))  # Append a tuple with link and msg_id
         except Exception as e:
             await message.reply(f"Error generating link for message {msg_id}: {e}")
-    
-    # Send the generated links to the user
+
+    # PART 1: Send the generated links and captions to the CHANNEL_ID (Code 1 functionality)
     for linka, msg_id in message_links:
         try:
             # Fetch the message object for the current msg_id
             current_message = await client.get_messages(client.db_channel.id, msg_id)
-    
+
             # Determine the caption for this message
             if bool(CUSTOM_CAPTION) and current_message.document:
                 raw_caption = "" if not current_message.caption else current_message.caption.html
@@ -91,11 +90,10 @@ async def batch(client: Client, message: Message):
             else:
                 raw_caption = "" if not current_message.caption else current_message.caption.html
                 caption = clean_caption(raw_caption)
-    
-            
-            # Send the caption followed by the link
+
+            # Send the caption followed by the link to CHANNEL_ID
             try:
-                X = await client.send_message(chat_id=CHANNEL_ID, text=f"{caption}\n{linka}")
+                await client.send_message(chat_id=CHANNEL_ID, text=f"{caption}\n{linka}")
             except FloodWait as e:
                 await asyncio.sleep(e.value)
                 await client.send_message(chat_id=CHANNEL_ID, text=f"{caption}\n{linka}")
@@ -103,7 +101,33 @@ async def batch(client: Client, message: Message):
         except Exception as e:
             await message.reply(f"Error processing message {msg_id}: {e}")
 
+    # PART 2: Further process the links and captions to clean and send them to the user (Code 2 functionality)
+    for linka, msg_id in message_links:
+        try:
+            # Fetch the message object for the current msg_id
+            current_message = await client.get_messages(client.db_channel.id, msg_id)
+
+            # Clean and format the caption for the user
+            if bool(CUSTOM_CAPTION) and current_message.document:
+                caption = CUSTOM_CAPTION.format(
+                    previouscaption="" if not current_message.caption else current_message.caption.html,
+                    filename=current_message.document.file_name
+                )
+            else:
+                caption = "" if not current_message.caption else current_message.caption.html
+
+            clean_caption = re.sub(r'https?://[^\s]+', '', caption).strip()
+
+            # Send the cleaned caption followed by the link to the user who triggered the batch command
+            try:
+                await client.send_message(chat_id=message.from_user.id, text=f"{clean_caption}\n{linka}")
+            except FloodWait as e:
+                await asyncio.sleep(e.x)
+                await client.send_message(chat_id=message.from_user.id, text=f"{clean_caption}\n{linka}")
+
+        except Exception as e:
+            await message.reply(f"Error processing message {msg_id}: {e}")
+
     # Inform the user that batch processing is completed
     await message.reply("Batch processing completed.")
-    
-    
+
