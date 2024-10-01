@@ -76,7 +76,7 @@ async def batch(client: Client, message: Message):
         try:
             # Fetch the message object for the current msg_id
             current_message = await client.get_messages(client.db_channel.id, msg_id)
-    
+
             # Determine the caption for this message
             if bool(CUSTOM_CAPTION) and current_message.document:
                 raw_caption = "" if not current_message.caption else current_message.caption.html
@@ -88,7 +88,6 @@ async def batch(client: Client, message: Message):
             else:
                 raw_caption = "" if not current_message.caption else current_message.caption.html
                 caption = clean_caption(raw_caption)
-        
 
             # Send the caption followed by the link to CHANNEL_ID
             try:
@@ -111,18 +110,26 @@ async def batch(client: Client, message: Message):
             base64_string = await encode(string)
             linka = f"https://t.me/{xyz}?start={base64_string}"
 
+            # Fetch the current message using the newly generated message ID
             current_message = await client.get_messages(CHANNEL_ID, new_msg_id)
 
             # Clean and format the caption for the user
-            
+            if bool(CUSTOM_CAPTION) and current_message.document:
+                caption = CUSTOM_CAPTION.format(
+                    previouscaption="" if not current_message.caption else current_message.caption.html,
+                    filename=current_message.document.file_name
+                )
+            else:
+                caption = "" if not current_message.caption else current_message.caption.html
 
-            
+            clean_caption_text = clean_caption(caption)  # Ensure this line is properly defined
+
             # Send the cleaned caption followed by the link to the user who triggered the batch command
             try:
-                await client.send_message(chat_id=message.from_user.id, text=f"{linka}")
+                await client.send_message(chat_id=message.from_user.id, text=f"{clean_caption_text}\n{linka}")
             except FloodWait as e:
                 await asyncio.sleep(e.x)
-                await client.send_message(chat_id=message.from_user.id, text=f"{linka}")
+                await client.send_message(chat_id=message.from_user.id, text=f"{clean_caption_text}\n{linka}")
 
         except Exception as e:
             await message.reply(f"Error processing message {new_msg_id}: {e}")
