@@ -75,9 +75,6 @@ async def batch(client: Client, message: Message):
         try:
             current_message = await client.get_messages(client.db_channel.id, msg_id)
 
-            # Initialize a cleaned caption
-            cleaned_caption = ""
-
             # Determine the caption for this message
             if bool(CUSTOM_CAPTION) and current_message.document:
                 raw_caption = "" if not current_message.caption else current_message.caption.html
