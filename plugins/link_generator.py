@@ -3,7 +3,7 @@ import re
 from pyrogram import Client, filters
 from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton
 from Adarsh.bot import StreamBot
-from config import ADMINS, CUSTOM_CAPTION, CD_CHANNEL, CHANNEL_ID
+from config import ADMINS, CUSTOM_CAPTION, CHANNEL_ID
 from helper_func import encode, get_message_id
 from pyrogram.errors import FloodWait, UserIsBlocked, InputUserDeactivated
 import asyncio
