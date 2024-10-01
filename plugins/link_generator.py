@@ -85,15 +85,15 @@ async def batch(client: Client, message: Message):
                 )
             else:
                 raw_caption = "" if not current_message.caption else current_message.caption.html
-                cleaned_caption = clean_caption(raw_caption)
+                caption = clean_caption(raw_caption)
 
             # Send the caption followed by the link to CHANNEL_ID
             try:
-                sent_message = await client.send_message(chat_id=CHANNEL_ID, text=f"{cleaned_caption}\n{linka}")
+                sent_message = await client.send_message(chat_id=CHANNEL_ID, text=f"{caption}\n{linka}")
                 new_message_ids.append(sent_message.message_id)  # Store the new message IDs
             except FloodWait as e:
                 await asyncio.sleep(e.value)
-                sent_message = await client.send_message(chat_id=CHANNEL_ID, text=f"{cleaned_caption}\n{linka}")
+                sent_message = await client.send_message(chat_id=CHANNEL_ID, text=f"{caption}\n{linka}")
                 new_message_ids.append(sent_message.message_id)
 
         except Exception as e:
