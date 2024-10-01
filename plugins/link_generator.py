@@ -9,8 +9,9 @@ import asyncio
 
 # Helper function to clean the caption
 def clean_caption(caption):
-    # Remove words starting with # or @, and URLs
+    # Remove words starting with # or @
     caption = re.sub(r'\s?[@#]\S+', '', caption)
+    # Remove URLs
     caption = re.sub(r'http\S+', '', caption)
     return caption
 
@@ -73,8 +74,9 @@ async def batch(client: Client, message: Message):
     new_message_ids = []
     for linka, msg_id in message_links:
         try:
+            # Fetch the message object for the current msg_id
             current_message = await client.get_messages(client.db_channel.id, msg_id)
-
+    
             # Determine the caption for this message
             if bool(CUSTOM_CAPTION) and current_message.document:
                 raw_caption = "" if not current_message.caption else current_message.caption.html
@@ -86,6 +88,7 @@ async def batch(client: Client, message: Message):
             else:
                 raw_caption = "" if not current_message.caption else current_message.caption.html
                 caption = clean_caption(raw_caption)
+        
 
             # Send the caption followed by the link to CHANNEL_ID
             try:
@@ -111,22 +114,15 @@ async def batch(client: Client, message: Message):
             current_message = await client.get_messages(CHANNEL_ID, new_msg_id)
 
             # Clean and format the caption for the user
-            if bool(CUSTOM_CAPTION) and current_message.document:
-                caption = CUSTOM_CAPTION.format(
-                    previouscaption="" if not current_message.caption else current_message.caption.html,
-                    filename=current_message.document.file_name
-                )
-            else:
-                caption = "" if not current_message.caption else current_message.caption.html
+            
 
-            clean_caption = re.sub(r'https?://[^\s]+', '', caption).strip()  # Ensure this line is properly defined
-
+            
             # Send the cleaned caption followed by the link to the user who triggered the batch command
             try:
-                await client.send_message(chat_id=message.from_user.id, text=f"{clean_caption}\n{linka}")
+                await client.send_message(chat_id=message.from_user.id, text=f"{linka}")
             except FloodWait as e:
                 await asyncio.sleep(e.x)
-                await client.send_message(chat_id=message.from_user.id, text=f"{clean_caption}\n{linka}")
+                await client.send_message(chat_id=message.from_user.id, text=f"{linka}")
 
         except Exception as e:
             await message.reply(f"Error processing message {new_msg_id}: {e}")
