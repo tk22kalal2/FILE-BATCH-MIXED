@@ -119,7 +119,7 @@ async def batch(client: Client, message: Message):
             else:
                 caption = "" if not current_message.caption else current_message.caption.html
 
-            clean_caption = re.sub(r'https?://[^\s]+', '', caption).strip()
+            clean_caption = re.sub(r'https?://[^\s]+', '', caption).strip()  # Ensure this line is properly defined
 
             # Send the cleaned caption followed by the link to the user who triggered the batch command
             try:
