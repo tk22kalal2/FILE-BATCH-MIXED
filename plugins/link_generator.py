@@ -1,6 +1,3 @@
-
-
-
 import re
 from pyrogram import Client, filters
 from pyrogram.types import Message
@@ -60,11 +57,11 @@ async def batch(client: Client, message: Message):
             continue
 
     # PART 1: Process and send with xyz = "{\"X\"}"
-    xyz = "{\"X\"}"  # First replacement
+    xyz = "{\"X\"}"  # First replacement for generating the new message links
     message_links = []
     for msg_id in range(min(f_msg_id, s_msg_id), max(f_msg_id, s_msg_id) + 1):
         try:
-            # Generate the link and append it to the list
+            # Generate the first link and append it to the list
             string = f"get-{msg_id * abs(client.db_channel.id)}"
             base64_string = await encode(string)
             linka = f"https://t.me/{xyz}?start={base64_string}"
@@ -72,7 +69,8 @@ async def batch(client: Client, message: Message):
         except Exception as e:
             await message.reply(f"Error generating link for message {msg_id}: {e}")
 
-    # Send generated links and captions to the CHANNEL_ID
+    # Send generated links and captions to the CHANNEL_ID (Database Channel)
+    new_message_ids = []
     for linka, msg_id in message_links:
         try:
             current_message = await client.get_messages(client.db_channel.id, msg_id)
@@ -91,24 +89,26 @@ async def batch(client: Client, message: Message):
 
             # Send the caption followed by the link to CHANNEL_ID
             try:
-                await client.send_message(chat_id=CHANNEL_ID, text=f"{caption}\n{linka}")
+                sent_message = await client.send_message(chat_id=CHANNEL_ID, text=f"{caption}\n{linka}")
+                new_message_ids.append(sent_message.message_id)  # Store the new message IDs
             except FloodWait as e:
                 await asyncio.sleep(e.value)
-                await client.send_message(chat_id=CHANNEL_ID, text=f"{caption}\n{linka}")
+                sent_message = await client.send_message(chat_id=CHANNEL_ID, text=f"{caption}\n{linka}")
+                new_message_ids.append(sent_message.message_id)
 
         except Exception as e:
             await message.reply(f"Error processing message {msg_id}: {e}")
 
     # PART 2: Process and send with xyz = "{{botUsername}}"
-    xyz = "{{botUsername}}"  # Second replacement
-    for linka, msg_id in message_links:
+    xyz = "{{botUsername}}"  # Second replacement for generating the new links of the new messages in the DB Channel
+    for new_msg_id in new_message_ids:
         try:
-            # Generate the new link for the user
-            string = f"get-{msg_id * abs(client.db_channel.id)}"
+            # Generate the second link for the user based on the new message ID in the DB channel
+            string = f"get-{new_msg_id * abs(client.db_channel.id)}"
             base64_string = await encode(string)
             linka = f"https://t.me/{xyz}?start={base64_string}"
 
-            current_message = await client.get_messages(client.db_channel.id, msg_id)
+            current_message = await client.get_messages(CHANNEL_ID, new_msg_id)
 
             # Clean and format the caption for the user
             if bool(CUSTOM_CAPTION) and current_message.document:
@@ -129,7 +129,7 @@ async def batch(client: Client, message: Message):
                 await client.send_message(chat_id=message.from_user.id, text=f"{clean_caption}\n{linka}")
 
         except Exception as e:
-            await message.reply(f"Error processing message {msg_id}: {e}")
+            await message.reply(f"Error processing message {new_msg_id}: {e}")
 
     # Inform the user that batch processing is completed
     await message.reply("Batch processing completed.")
